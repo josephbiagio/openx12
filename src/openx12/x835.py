@@ -299,53 +299,62 @@ class ERA:
             "total_patient_responsibility": total_patient_resp,
         }
 
-    def table(self) -> Dict[str, Any]:
-        """Return display-friendly table format."""
-        claims_table: List[Dict[str, Any]] = []
-        services_table: List[Dict[str, Any]] = []
+    def table(self) -> str:
+        """Return display-friendly formatted text table."""
+        lines: List[str] = []
 
+        # File info header
+        lines.append("=" * 80)
+        lines.append("835 ERA (Electronic Remittance Advice)")
+        lines.append("=" * 80)
+        lines.append(f"Payer:    {self.payer.get('name', 'N/A')}")
+        lines.append(f"Payee:    {self.payee.get('name', 'N/A')}")
+        lines.append(f"Payment:  ${self.payment_amount:.2f} ({self.payment_method})")
+        lines.append(f"Check #:  {self.check_number}")
+        lines.append("")
+
+        # Claims table
+        claims_data = []
         for claim in self.claims:
-            claims_table.append({
-                "patient_control_number": claim.get("patient_control_number", ""),
-                "status": claim.get("claim_status", ""),
-                "charge": f"${claim.get('total_claim_charge', 0.0):.2f}",
-                "paid": f"${claim.get('claim_payment_amount', 0.0):.2f}",
-                "allowed": f"${claim.get('allowed_amount', 0.0):.2f}",
-                "pr_total": f"${claim.get('patient_responsibility', 0.0):.2f}",
-                "bill_to": claim.get("bill_to_hint", BILL_TO_HINT_PRIMARY),
-                "claim_filing_indicator": claim.get("claim_filing_indicator_code", ""),
-                "payer_claim_control_number": claim.get("payer_claim_control_number", ""),
+            claims_data.append({
+                "Claim #": claim.get("patient_control_number", ""),
+                "Status": claim.get("claim_status", ""),
+                "Charge": f"${claim.get('total_claim_charge', 0.0):.2f}",
+                "Paid": f"${claim.get('claim_payment_amount', 0.0):.2f}",
+                "Allowed": f"${claim.get('allowed_amount', 0.0):.2f}",
+                "PR": f"${claim.get('patient_responsibility', 0.0):.2f}",
+                "Bill To": claim.get("bill_to_hint", BILL_TO_HINT_PRIMARY),
             })
 
+        if claims_data:
+            lines.append("CLAIMS")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(claims_data))
+            lines.append("")
+
+        # Services table
+        services_data = []
+        for claim in self.claims:
             for idx, svc in enumerate(claim.get("services", [])):
                 pr_amt = float(svc.get("patient_responsibility", 0.0))
                 allowed_amt = float(svc.get("allowed_amount", 0.0))
-                route = "patient" if pr_amt > 0 else "secondary_or_writeoff"
-                services_table.append({
-                    "patient_control_number": claim.get("patient_control_number", ""),
-                    "line_number": idx + 1,
-                    "cpt_code": svc.get("cpt_code", ""),
-                    "modifiers": ", ".join(svc.get("modifiers", [])),
-                    "charge": f"${svc.get('line_item_charge_amount', 0.0):.2f}",
-                    "allowed": f"${allowed_amt:.2f}",
-                    "paid": f"${svc.get('line_item_payment_amount', 0.0):.2f}",
-                    "pr": f"${pr_amt:.2f}",
-                    "route": route,
-                    "claim_bill_to": claim.get("bill_to_hint", BILL_TO_HINT_PRIMARY),
+                services_data.append({
+                    "Claim #": claim.get("patient_control_number", ""),
+                    "Line": idx + 1,
+                    "CPT": svc.get("cpt_code", ""),
+                    "Mods": ", ".join(svc.get("modifiers", [])),
+                    "Charge": f"${svc.get('line_item_charge_amount', 0.0):.2f}",
+                    "Allowed": f"${allowed_amt:.2f}",
+                    "Paid": f"${svc.get('line_item_payment_amount', 0.0):.2f}",
+                    "PR": f"${pr_amt:.2f}",
                 })
 
-        return {
-            "file_info": {
-                "type": "835",
-                "parsed_at": self._parsed.get("parsed_at", ""),
-                "total_segments": self._parsed.get("summary", {}).get("total_segments", 0),
-            },
-            "tables": {
-                "claims": claims_table,
-                "services": services_table,
-            },
-            "payment": self._parsed.get("summary", {}).get("payments", {}),
-        }
+        if services_data:
+            lines.append("SERVICES")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(services_data))
+
+        return "\n".join(lines)
 
 
 # -----------------------------------------------------------------------------
@@ -387,4 +396,29 @@ def _derive_bill_to_hint(claim_status: Optional[str], patient_responsibility: Op
         return BILL_TO_HINT_PATIENT
     return BILL_TO_HINT_PRIMARY
 
+
+def _format_text_table(rows: List[Dict[str, Any]]) -> str:
+    """Format a list of dictionaries as a simple text table."""
+    if not rows:
+        return ""
+
+    # Get column headers from first row
+    headers = list(rows[0].keys())
+
+    # Calculate column widths
+    widths = {h: len(str(h)) for h in headers}
+    for row in rows:
+        for h in headers:
+            widths[h] = max(widths[h], len(str(row.get(h, ""))))
+
+    # Build header row
+    header_line = "  ".join(str(h).ljust(widths[h]) for h in headers)
+    separator = "  ".join("-" * widths[h] for h in headers)
+
+    # Build data rows
+    data_lines = []
+    for row in rows:
+        data_lines.append("  ".join(str(row.get(h, "")).ljust(widths[h]) for h in headers))
+
+    return "\n".join([header_line, separator] + data_lines)
 

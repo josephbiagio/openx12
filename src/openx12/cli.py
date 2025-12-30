@@ -65,7 +65,7 @@ def main():
     parser.add_argument(
         "-v", "--version",
         action="version",
-        version="%(prog)s 0.2.0"
+        version="%(prog)s 0.2.1"
     )
 
     args = parser.parse_args()
@@ -96,13 +96,14 @@ def main():
 
         if args.format == "json":
             result = parsed.json()
+            indent = 2 if args.pretty else None
+            output = json.dumps(result, indent=indent, default=str)
         elif args.format == "table":
-            result = parsed.table()
+            output = parsed.table()
         else:
             result = parsed.summary()
-
-        indent = 2 if args.pretty else None
-        output = json.dumps(result, indent=indent, default=str)
+            indent = 2 if args.pretty else None
+            output = json.dumps(result, indent=indent, default=str)
 
         if args.output:
             Path(args.output).write_text(output)

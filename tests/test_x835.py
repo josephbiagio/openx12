@@ -171,37 +171,40 @@ class TestSummary:
 class TestTable:
     """Tests for .table() output"""
 
-    def test_has_tables(self, sample_835):
-        """Should include tables section"""
+    def test_returns_string(self, sample_835):
+        """Should return a string"""
         result = x835.parse(sample_835).table()
-        assert 'tables' in result
-        assert 'claims' in result['tables']
-        assert 'services' in result['tables']
+        assert isinstance(result, str)
 
-    def test_file_info(self, sample_835):
-        """Should include file_info section"""
+    def test_has_header(self, sample_835):
+        """Should include 835 header"""
         result = x835.parse(sample_835).table()
-        assert 'file_info' in result
-        assert result['file_info']['type'] == '835'
+        assert '835 ERA' in result
 
-    def test_claims_table_format(self, sample_835):
-        """Should format claims for display"""
+    def test_has_claims_section(self, sample_835):
+        """Should include CLAIMS section"""
         result = x835.parse(sample_835).table()
-        claims = result['tables']['claims']
-        assert len(claims) == 1
-        claim = claims[0]
-        assert 'patient_control_number' in claim
-        assert claim['charge'].startswith('$')
-        assert claim['paid'].startswith('$')
+        assert 'CLAIMS' in result
 
-    def test_services_table_format(self, sample_835):
-        """Should format services for display"""
+    def test_has_services_section(self, sample_835):
+        """Should include SERVICES section"""
         result = x835.parse(sample_835).table()
-        services = result['tables']['services']
-        assert len(services) == 3
-        service = services[0]
-        assert 'cpt_code' in service
-        assert service['charge'].startswith('$')
+        assert 'SERVICES' in result
+
+    def test_claims_include_claim_number(self, sample_835):
+        """Should include claim numbers in output"""
+        result = x835.parse(sample_835).table()
+        assert 'CLM001' in result
+
+    def test_services_include_cpt_codes(self, sample_835):
+        """Should include CPT codes in output"""
+        result = x835.parse(sample_835).table()
+        assert '99213' in result
+
+    def test_amounts_formatted_with_dollar(self, sample_835):
+        """Should format amounts with dollar signs"""
+        result = x835.parse(sample_835).table()
+        assert '$' in result
 
 
 class TestEdgeCases:

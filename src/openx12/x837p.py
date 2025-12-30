@@ -452,81 +452,123 @@ class Claim837P:
             'total_diagnoses': sum(len(c.get('diagnoses', [])) for c in self.claims),
         }
 
-    def table(self) -> Dict[str, Any]:
-        """Return display-friendly table format."""
-        claims_table = []
-        services_table = []
+    def table(self) -> str:
+        """Return display-friendly formatted text table."""
+        lines: List[str] = []
 
+        # File info header
+        lines.append("=" * 80)
+        lines.append("837P Professional Claim")
+        lines.append("=" * 80)
+        lines.append(f"Provider:       {self.billing_provider.get('last_name', 'N/A')}")
+        lines.append(f"NPI:            {self.billing_provider.get('id_value', 'N/A')}")
+        lines.append(f"Total Claims:   {len(self.claims)}")
+        lines.append(f"Total Billed:   ${self.total_billed:.2f}")
+        lines.append("")
+
+        # Claims table
+        claims_data = []
         for claim in self.claims:
             dates = claim.get('dates', {})
             sbr = claim.get('subscriber_info', {})
-
-            claims_table.append({
-                'claim_number': claim.get('claim_number', ''),
-                'amount': f"${claim.get('amount', 0):.2f}",
-                'place_of_service': claim.get('place_of_service', ''),
-                'service_date': dates.get('service_date', ''),
-                'payer_sequence': sbr.get('payer_sequence', ''),
-                'service_count': len(claim.get('services', [])),
-                'diagnosis_count': len(claim.get('diagnoses', []))
+            claims_data.append({
+                'Claim #': claim.get('claim_number', ''),
+                'Amount': f"${claim.get('amount', 0):.2f}",
+                'POS': claim.get('place_of_service', ''),
+                'Date': dates.get('service_date', ''),
+                'Payer Seq': sbr.get('payer_sequence', ''),
+                'Services': len(claim.get('services', [])),
+                'Dx': len(claim.get('diagnoses', []))
             })
 
+        if claims_data:
+            lines.append("CLAIMS")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(claims_data))
+            lines.append("")
+
+        # Services table
+        services_data = []
+        for claim in self.claims:
             for i, service in enumerate(claim.get('services', [])):
-                services_table.append({
-                    'claim_number': claim.get('claim_number', ''),
-                    'line_number': i + 1,
-                    'cpt_code': service.get('cpt_code', ''),
-                    'modifiers': ', '.join(service.get('modifiers', [])),
-                    'charge': f"${service.get('charge', 0):.2f}",
-                    'units': service.get('units', '1'),
-                    'service_date': service.get('service_date', ''),
-                    'place_of_service': service.get('place_of_service', '')
+                services_data.append({
+                    'Claim #': claim.get('claim_number', ''),
+                    'Line': i + 1,
+                    'CPT': service.get('cpt_code', ''),
+                    'Mods': ', '.join(service.get('modifiers', [])),
+                    'Charge': f"${service.get('charge', 0):.2f}",
+                    'Units': service.get('units', '1'),
+                    'Date': service.get('service_date', ''),
                 })
 
-        patients_table = []
+        if services_data:
+            lines.append("SERVICES")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(services_data))
+            lines.append("")
+
+        # Patients table
+        patients_data = []
         for patient in self.patients:
             demographics = patient.get('demographics', {})
             address = patient.get('address', {})
-            patients_table.append({
-                'name': f"{patient.get('first_name', '')} {patient.get('last_name', '')}".strip(),
-                'entity_type': patient.get('entity_type', ''),
-                'id_qualifier': patient.get('id_qualifier', ''),
-                'id_value': patient.get('subscriber_id', '') or patient.get('id_value', ''),
-                'date_of_birth': demographics.get('date_of_birth', ''),
-                'gender': demographics.get('gender', ''),
-                'city': address.get('city', ''),
-                'state': address.get('state', '')
+            patients_data.append({
+                'Name': f"{patient.get('first_name', '')} {patient.get('last_name', '')}".strip(),
+                'ID': patient.get('subscriber_id', '') or patient.get('id_value', ''),
+                'DOB': demographics.get('date_of_birth', ''),
+                'Gender': demographics.get('gender', ''),
+                'City': address.get('city', ''),
+                'State': address.get('state', '')
             })
 
-        providers_table = []
+        if patients_data:
+            lines.append("PATIENTS")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(patients_data))
+            lines.append("")
+
+        # Providers table
+        providers_data = []
         for provider in self.providers:
             address = provider.get('address', {})
-            providers_table.append({
-                'name': provider.get('last_name', ''),
-                'entity_type': provider.get('entity_type', ''),
-                'id_qualifier': provider.get('id_qualifier', ''),
-                'id_value': provider.get('id_value', ''),
-                'tax_id': provider.get('tax_id', ''),
-                'city': address.get('city', ''),
-                'state': address.get('state', '')
+            providers_data.append({
+                'Name': provider.get('last_name', ''),
+                'NPI': provider.get('id_value', ''),
+                'Tax ID': provider.get('tax_id', ''),
+                'City': address.get('city', ''),
+                'State': address.get('state', '')
             })
 
-        return {
-            'file_info': {
-                'type': '837P',
-                'parsed_at': self._parsed.get('parsed_at', ''),
-                'total_segments': self._parsed['summary']['total_segments'],
-                'total_claims': len(claims_table),
-                'total_services': len(services_table)
-            },
-            'tables': {
-                'claims': claims_table,
-                'services': services_table,
-                'patients': patients_table,
-                'providers': providers_table
-            },
-            'headers': self._parsed.get('interchange', {}),
-            'batch_info': self._parsed.get('batch_header', {})
-        }
+        if providers_data:
+            lines.append("PROVIDERS")
+            lines.append("-" * 80)
+            lines.append(_format_text_table(providers_data))
 
+        return "\n".join(lines)
+
+
+def _format_text_table(rows: List[Dict[str, Any]]) -> str:
+    """Format a list of dictionaries as a simple text table."""
+    if not rows:
+        return ""
+
+    # Get column headers from first row
+    headers = list(rows[0].keys())
+
+    # Calculate column widths
+    widths = {h: len(str(h)) for h in headers}
+    for row in rows:
+        for h in headers:
+            widths[h] = max(widths[h], len(str(row.get(h, ""))))
+
+    # Build header row
+    header_line = "  ".join(str(h).ljust(widths[h]) for h in headers)
+    separator = "  ".join("-" * widths[h] for h in headers)
+
+    # Build data rows
+    data_lines = []
+    for row in rows:
+        data_lines.append("  ".join(str(row.get(h, "")).ljust(widths[h]) for h in headers))
+
+    return "\n".join([header_line, separator] + data_lines)
 

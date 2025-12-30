@@ -215,43 +215,55 @@ class TestSummary:
 class TestTable:
     """Tests for .table() output"""
 
-    def test_has_tables(self, sample_837p):
-        """Should include all table types"""
+    def test_returns_string(self, sample_837p):
+        """Should return a string"""
         result = x837p.parse(sample_837p).table()
-        assert 'tables' in result
-        assert 'claims' in result['tables']
-        assert 'services' in result['tables']
-        assert 'patients' in result['tables']
-        assert 'providers' in result['tables']
+        assert isinstance(result, str)
 
-    def test_file_info(self, sample_837p):
-        """Should include file_info section"""
+    def test_has_header(self, sample_837p):
+        """Should include 837P header"""
         result = x837p.parse(sample_837p).table()
-        assert 'file_info' in result
-        assert result['file_info']['type'] == '837P'
+        assert '837P' in result
 
-    def test_claims_table_format(self, sample_837p):
-        """Should format claims for display"""
+    def test_has_claims_section(self, sample_837p):
+        """Should include CLAIMS section"""
         result = x837p.parse(sample_837p).table()
-        claims = result['tables']['claims']
-        assert len(claims) == 1
-        claim = claims[0]
-        assert claim['amount'].startswith('$')
+        assert 'CLAIMS' in result
 
-    def test_patients_table_includes_demographics(self, sample_837p):
-        """Should include demographics in patient table"""
+    def test_has_services_section(self, sample_837p):
+        """Should include SERVICES section"""
         result = x837p.parse(sample_837p).table()
-        patient = result['tables']['patients'][0]
-        assert 'date_of_birth' in patient
-        assert 'gender' in patient
-        assert patient['date_of_birth'] == '1980-05-15'
+        assert 'SERVICES' in result
 
-    def test_providers_table_includes_address(self, sample_837p):
-        """Should include address info in provider table"""
+    def test_has_patients_section(self, sample_837p):
+        """Should include PATIENTS section"""
         result = x837p.parse(sample_837p).table()
-        provider = result['tables']['providers'][0]
-        assert 'city' in provider
-        assert 'state' in provider
+        assert 'PATIENTS' in result
+
+    def test_has_providers_section(self, sample_837p):
+        """Should include PROVIDERS section"""
+        result = x837p.parse(sample_837p).table()
+        assert 'PROVIDERS' in result
+
+    def test_claims_include_claim_number(self, sample_837p):
+        """Should include claim numbers in output"""
+        result = x837p.parse(sample_837p).table()
+        assert 'CLAIM001' in result
+
+    def test_amounts_formatted_with_dollar(self, sample_837p):
+        """Should format amounts with dollar signs"""
+        result = x837p.parse(sample_837p).table()
+        assert '$' in result
+
+    def test_patient_info_included(self, sample_837p):
+        """Should include patient information"""
+        result = x837p.parse(sample_837p).table()
+        assert 'JOHN' in result or 'SMITH' in result
+
+    def test_provider_info_included(self, sample_837p):
+        """Should include provider information"""
+        result = x837p.parse(sample_837p).table()
+        assert 'PREMIER MEDICAL GROUP' in result
 
 
 class TestEdgeCases:

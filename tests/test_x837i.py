@@ -161,27 +161,50 @@ class TestSummary:
 class TestTable:
     """Tests for .table() output"""
 
-    def test_has_tables(self, sample_837i):
-        """Should include all table types"""
+    def test_returns_string(self, sample_837i):
+        """Should return a string"""
         result = x837i.parse(sample_837i).table()
-        assert 'tables' in result
-        assert 'claims' in result['tables']
-        assert 'services' in result['tables']
-        assert 'patients' in result['tables']
-        assert 'providers' in result['tables']
+        assert isinstance(result, str)
 
-    def test_institutional_fields(self, sample_837i):
-        """Should include institutional-specific fields"""
+    def test_has_header(self, sample_837i):
+        """Should include 837I header"""
         result = x837i.parse(sample_837i).table()
-        claim = result['tables']['claims'][0]
-        assert 'admission_type' in claim
-        assert 'patient_status' in claim
+        assert '837I' in result
 
-    def test_revenue_codes_in_services(self, sample_837i):
-        """Should include revenue codes in services table"""
+    def test_has_claims_section(self, sample_837i):
+        """Should include CLAIMS section"""
         result = x837i.parse(sample_837i).table()
-        service = result['tables']['services'][0]
-        assert 'revenue_code' in service
+        assert 'CLAIMS' in result
+
+    def test_has_services_section(self, sample_837i):
+        """Should include SERVICES section"""
+        result = x837i.parse(sample_837i).table()
+        assert 'SERVICES' in result
+
+    def test_has_patients_section(self, sample_837i):
+        """Should include PATIENTS section"""
+        result = x837i.parse(sample_837i).table()
+        assert 'PATIENTS' in result
+
+    def test_has_providers_section(self, sample_837i):
+        """Should include PROVIDERS section"""
+        result = x837i.parse(sample_837i).table()
+        assert 'PROVIDERS' in result
+
+    def test_claims_include_claim_number(self, sample_837i):
+        """Should include claim numbers in output"""
+        result = x837i.parse(sample_837i).table()
+        assert 'HOSP001' in result
+
+    def test_revenue_codes_included(self, sample_837i):
+        """Should include revenue codes in output"""
+        result = x837i.parse(sample_837i).table()
+        assert '0450' in result
+
+    def test_amounts_formatted_with_dollar(self, sample_837i):
+        """Should format amounts with dollar signs"""
+        result = x837i.parse(sample_837i).table()
+        assert '$' in result
 
 
 class TestEdgeCases:

@@ -180,17 +180,29 @@ Returns full parsed data including:
 
 ### .table()
 
-Returns display-friendly format:
-```python
-{
-    "file_info": {"type": "837P", "total_claims": 592},
-    "tables": {
-        "claims": [...],
-        "services": [...],
-        "patients": [...],
-        "providers": [...]
-    }
-}
+Returns a formatted text table string for display:
+```
+================================================================================
+837P Professional Claim
+================================================================================
+Provider:       PREMIER MEDICAL GROUP
+NPI:            1234567890
+Total Claims:   1
+Total Billed:   $350.00
+
+CLAIMS
+--------------------------------------------------------------------------------
+Claim #   Amount    POS  Date        Payer Seq  Services  Dx
+--------  --------  ---  ----------  ---------  --------  --
+CLAIM001  $350.00   11   2023-12-10  P          3         3
+
+SERVICES
+--------------------------------------------------------------------------------
+Claim #   Line  CPT    Mods  Charge    Units  Date
+--------  ----  -----  ----  --------  -----  ----------
+CLAIM001  1     99214  25    $150.00   1      2023-12-10
+CLAIM001  2     36415        $50.00    1      2023-12-10
+CLAIM001  3     80053        $150.00   1      2023-12-10
 ```
 
 ## Supported Transactions
